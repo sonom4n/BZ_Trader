@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BZ_Trader Editor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Source+Sans+3:wght@400;600;700&display=swap">
+<style>
+:root{
+  --bg:#EDEFE8; --surface:#F8F9F4; --surface-2:#E2E6DA; --ink:#1D221C; --muted:#5B6457; --line:#C9CFBF;
+  --route:#2F6B4F; --route-soft:#D5E6DC; --trader:#AE650A; --trader-soft:#F4E3C6; --end:#A23B2A; --end-soft:#F1D9D3;
+  --walk:#E6E9E0; --grid:#C3C9B9; --ok:#2F6B4F; --warn:#AE650A; --err:#A23B2A;
+  --display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",Consolas,"Courier New",monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#121611; --surface:#1A1F18; --surface-2:#232A21; --ink:#E2E7DB; --muted:#9AA391; --line:#333C30;
+    --route:#66B58D; --route-soft:#1E3328; --trader:#E3A445; --trader-soft:#392D16; --end:#D56E5F; --end-soft:#3A201B;
+    --walk:#1E241C; --grid:#303A2D; --ok:#66B58D; --warn:#E3A445; --err:#D56E5F;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#121611; --surface:#1A1F18; --surface-2:#232A21; --ink:#E2E7DB; --muted:#9AA391; --line:#333C30;
+  --route:#66B58D; --route-soft:#1E3328; --trader:#E3A445; --trader-soft:#392D16; --end:#D56E5F; --end-soft:#3A201B;
+  --walk:#1E241C; --grid:#303A2D; --ok:#66B58D; --warn:#E3A445; --err:#D56E5F;
+}
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+body{background:var(--bg); color:var(--ink); font:15px/1.5 var(--body); margin:0; padding-inline:clamp(16px,3vw,40px); padding-block:22px 48px}
+.wrap{max-width:1240px; margin:0 auto; display:flex; flex-direction:column; gap:18px}
+h1,h2,h3{font-family:var(--display); font-weight:700; letter-spacing:.02em; text-wrap:balance; margin:0}
+h1{font-size:clamp(28px,4vw,40px); text-transform:uppercase; line-height:1}
+h2{font-size:22px; text-transform:uppercase}
+.eyebrow{font-family:var(--display); font-size:14px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted)}
+.mono{font-family:var(--mono); font-variant-numeric:tabular-nums}
+header.top{display:flex; flex-wrap:wrap; gap:10px 24px; align-items:flex-end; justify-content:space-between}
+header.top .ident{display:flex; flex-direction:column; gap:6px}
+/* arriba a la derecha, el manual y el idioma (EN / ES), con los colores y la letra del editor */
+header.top .lado{display:flex; flex-direction:column; align-items:flex-end; justify-content:space-between; gap:10px; align-self:stretch; min-width:0}
+.herramientas{display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:flex-end}
+.idioma{display:inline-flex; align-items:stretch; border:1px solid var(--line); border-radius:8px; overflow:hidden; background:var(--surface)}
+.idioma svg{width:16px; height:16px; align-self:center; margin:0 6px 0 9px; color:var(--muted); flex:none}
+.idioma button{border:0; border-left:1px solid var(--line); background:none; padding:5px 11px; cursor:pointer; font-family:var(--display); font-weight:700; font-size:15px; letter-spacing:.08em; color:var(--muted)}
+.idioma button:hover{color:var(--ink)}
+.idioma button[aria-pressed="true"]{background:var(--route); color:var(--surface)}
+.idioma button:focus-visible{outline:2px solid var(--route); outline-offset:-3px}
+#manual-aviso{max-width:420px; text-align:right}
+details summary b.sum{font-weight:inherit}
+.chips{display:flex; flex-wrap:wrap; gap:8px; align-items:center}
+.chip{display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:999px; border:1px solid var(--line); background:var(--surface); font-size:13px; color:var(--muted); max-width:100%}
+.chip b{color:var(--ink); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.chip.warn{border-color:var(--warn); color:var(--warn); background:var(--trader-soft)}
+.chip.ok{border-color:var(--ok); color:var(--ok); background:var(--route-soft)}
+button{font:inherit; color:inherit}
+.btn{border:1px solid var(--line); background:var(--surface); border-radius:8px; padding:6px 12px; cursor:pointer; font-weight:600; white-space:nowrap}
+.btn:hover{border-color:var(--route)}
+.btn.primary{background:var(--route); border-color:var(--route); color:var(--surface)}
+.btn:disabled{opacity:.45; cursor:default}
+.btn.grande{font-size:16px; padding:10px 22px}
+.hint.warn{color:var(--warn)}
+.hint.resumen{color:var(--ink, inherit); font-weight:600; margin-top:4px}
+/* el editor fuera de la raiz de un server: arriba de todo, que no se pase por alto */
+.raiz-aviso{margin:0; padding:12px 16px; border:2px solid var(--warn); border-radius:12px; background:var(--trader-soft); color:var(--ink); font-weight:600}
+/* un server recien instalado: lo que falta para armar un servicio */
+.guia{margin:0; padding-left:20px; color:var(--warn); font-size:14px}
+.guia li{margin:2px 0}
+:focus-visible{outline:2px solid var(--route); outline-offset:2px}
+input[type=file].oculto{position:absolute; width:1px; height:1px; opacity:0; pointer-events:none}
+
+.caja{background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:14px 16px; display:flex; flex-direction:column; gap:10px}
+.caja .fila-cab{display:flex; flex-wrap:wrap; gap:10px 16px; align-items:center; justify-content:space-between}
+.caja p{margin:0}
+.hint{font-size:13px; color:var(--muted); margin:0}
+.grid2{display:grid; grid-template-columns:minmax(150px,230px) 1fr; gap:6px 12px; align-items:center; font-size:14px}
+.grid2 > span{color:var(--muted)}
+@media (max-width:560px){ .grid2{grid-template-columns:1fr} }
+details summary{cursor:pointer; font-family:var(--display); font-weight:600; font-size:16px; text-transform:uppercase; letter-spacing:.06em}
+details summary span{font-family:var(--body); text-transform:none; letter-spacing:0; font-weight:400; font-size:13px; color:var(--muted); margin-left:8px}
+.grupo{display:flex; flex-wrap:wrap; gap:8px; align-items:center}
+.grupo select{width:auto; min-width:200px; max-width:100%}
+
+/* ---- la cinta ---- */
+.cinta{background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:18px clamp(12px,3vw,28px) 14px}
+.cinta .scroll{overflow-x:auto; padding-bottom:4px}
+.fila{display:flex; align-items:center; min-width:min-content; padding:4px 26px 44px}
+.tramo{flex:1 1 60px; min-width:60px; height:6px; background:var(--route); border-radius:3px; position:relative; margin-inline:-2px}
+.tramo span{position:absolute; left:50%; top:10px; transform:translateX(-50%); font-size:12px; color:var(--muted); white-space:nowrap}
+.nodo{display:flex; flex-direction:column; align-items:center; background:none; border:0; padding:0; cursor:pointer; position:relative; z-index:1; flex:none}
+.nodo .o{width:46px; height:46px; border-radius:50%; display:grid; place-items:center; font-family:var(--display); font-weight:700; font-size:20px; border:3px solid var(--route); background:var(--surface); color:var(--route); transition:transform .15s}
+.nodo.marca .o{border-color:var(--trader); color:var(--trader)}
+.nodo.fin .o{border-color:var(--end); color:var(--end); font-size:15px}
+.nodo[aria-pressed="true"] .o{transform:scale(1.12); box-shadow:0 0 0 5px var(--route-soft)}
+.nodo.marca[aria-pressed="true"] .o{box-shadow:0 0 0 5px var(--trader-soft)}
+.nodo.fin[aria-pressed="true"] .o{box-shadow:0 0 0 5px var(--end-soft)}
+.nodo.apagada .o{opacity:.45; border-style:dashed}
+.nodo .t{font-size:12px; color:var(--muted); line-height:1.2; text-align:center; position:absolute; top:54px; white-space:nowrap}
+.nodo .t b{display:block; color:var(--ink); font-size:13px}
+.cinta .pie{margin:4px 0 0; font-size:13px; color:var(--muted)}
+
+/* ---- zona de trabajo ---- */
+.trabajo{display:grid; grid-template-columns:minmax(0,1.4fr) minmax(0,1fr); gap:18px; align-items:start}
+@media (max-width:880px){ .trabajo{grid-template-columns:1fr} }
+.panel{background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:16px; display:flex; flex-direction:column; gap:12px; min-width:0}
+.panel .cab{display:flex; flex-direction:column; gap:2px}
+.escena svg{width:100%; height:auto; display:block; border-radius:8px; touch-action:none; user-select:none}
+/* el zoom de la parada y la vista grande */
+.plano-barra{display:flex; gap:6px; align-items:center; flex-wrap:wrap}
+.plano-barra .btn{min-width:36px}
+/* «Quien viaja»: el dibujo con su zoom y, al costado, la lista de los que viajan (debajo, si no hay lugar) */
+.asientos{display:grid; grid-template-columns:minmax(0,1fr) minmax(130px,auto); gap:12px; align-items:start}
+.asientos-dibujo{display:flex; flex-direction:column; gap:8px; min-width:0}
+.lista-plazas{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:4px; font-size:13px; max-height:340px; overflow:auto}
+.lista-plazas button{display:flex; gap:8px; align-items:center; width:100%; text-align:left; border:1px solid var(--line); background:var(--surface); border-radius:8px; padding:4px 8px; cursor:pointer}
+.lista-plazas button:disabled{cursor:default}
+.lista-plazas button.sel{border-color:var(--ink)}
+.lista-plazas b{display:inline-flex; align-items:center; justify-content:center; min-width:22px; height:22px; border-radius:6px; color:var(--surface); font-size:12px}
+.lista-plazas b.chofer{background:var(--route)}
+.lista-plazas b.comerciante{background:var(--trader)}
+.lista-plazas small{display:block; color:var(--muted); font-size:11px}
+.asientos.ancho{grid-template-columns:1fr}
+.asientos.ancho .lista-plazas{flex-direction:row; flex-wrap:wrap; max-height:none}
+.asientos.ancho .lista-plazas li{flex:0 1 auto}
+@media (max-width:560px){ .asientos{grid-template-columns:1fr} }
+.escena.grande{position:fixed; inset:10px; z-index:60; overflow:auto; box-shadow:0 12px 48px rgba(0,0,0,.35)}
+.escena.grande svg{max-height:calc(100vh - 210px)}
+/* en dos columnas, el plano (o los asientos) acompaña al bajar por el inspector: fijo arriba y entero en la pantalla;
+   si no entra, el dibujo se achica (el SVG conserva su proporcion). En una columna y en la vista grande, como siempre */
+@media (min-width:881px){
+  .escena.con-plano:not(.grande){position:sticky; top:10px; max-height:calc(100vh - 20px)}
+  .escena.con-plano:not(.grande) #esc{flex:0 1 auto; min-height:0; display:flex; flex-direction:column; gap:12px}
+  .escena.con-plano:not(.grande) #esc .plano-barra{flex:none}
+  .escena.con-plano:not(.grande) #esc svg{flex:0 1 auto; min-height:120px}
+}
+/* y la cinta de paradas fija arriba, con el plano debajo de ella (su alto lo mide el JS: --cinta-alto). Pegada arriba,
+   sin la linea de ayuda. Con una ventana baja (menos de 600 px) no entran las dos: sólo el plano, como arriba */
+.zona-trabajo{display:flex; flex-direction:column; gap:18px}
+@media (min-width:881px) and (min-height:600px){
+  .cinta{position:sticky; top:0; z-index:30}
+  .cinta.pegada{padding-top:8px; padding-bottom:4px; box-shadow:0 6px 18px rgba(0,0,0,.14)}
+  .cinta.pegada .pie{display:none}
+  .escena.con-plano:not(.grande){top:calc(var(--cinta-alto, 0px) + 10px); max-height:calc(100vh - var(--cinta-alto, 0px) - 20px)}
+}
+.leyenda{display:flex; flex-wrap:wrap; gap:6px 16px; font-size:12px; color:var(--muted)}
+.leyenda i{display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:5px; vertical-align:-1px}
+
+/* ---- formularios ---- */
+fieldset{border:0; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; min-width:0}
+legend{font-family:var(--display); font-weight:600; font-size:15px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin-bottom:6px; padding:0}
+.bloque{display:flex; flex-direction:column; gap:10px; padding-top:12px; border-top:1px solid var(--line)}
+.seg{display:flex; flex-wrap:wrap; border:1px solid var(--line); border-radius:8px; overflow:hidden}
+.seg label{flex:1 1 auto; text-align:center; padding:6px 10px; font-size:13px; font-weight:600; cursor:pointer; border-left:1px solid var(--line); background:var(--surface)}
+.seg label:first-child{border-left:0}
+.seg input{position:absolute; opacity:0; pointer-events:none}
+.seg label:has(input:checked){background:var(--route); color:var(--surface)}
+.seg label:has(input:focus-visible){outline:2px solid var(--route); outline-offset:-3px}
+.campo{display:grid; grid-template-columns:minmax(110px,44%) 1fr; gap:6px 10px; align-items:center; font-size:14px}
+.campo > span:first-child{color:var(--muted)}
+input[type=number], input[type=text], select{font:inherit; font-size:14px; color:var(--ink); background:var(--bg); border:1px solid var(--line); border-radius:6px; padding:5px 8px; width:100%; min-width:0}
+input[type=number]{font-family:var(--mono); font-variant-numeric:tabular-nums}
+input::placeholder{color:var(--muted); opacity:.8}
+.check{display:flex; gap:8px; align-items:center; font-size:14px; cursor:pointer}
+.check input{accent-color:var(--route); width:16px; height:16px; flex:none}
+.stepper{display:inline-flex; align-items:center; border:1px solid var(--line); border-radius:8px; overflow:hidden; justify-self:start}
+.stepper button{border:0; background:var(--surface-2); width:32px; height:30px; cursor:pointer; font-weight:700}
+.stepper button:disabled{opacity:.4; cursor:default}
+.stepper output{min-width:62px; text-align:center; font-family:var(--mono)}
+.nota{font-size:13px; color:var(--muted); background:var(--surface-2); border-radius:8px; padding:8px 10px; margin:0}
+.nota.clave{background:var(--route-soft); color:var(--ink)}
+.nota:empty, .resultado:empty{display:none}
+.paso{display:inline-grid; place-items:center; width:28px; height:28px; border-radius:50%; background:var(--route); color:var(--surface); font-size:17px; margin-right:6px; vertical-align:2px}
+.titulo-paso{margin:4px 0 -6px}
+.mapa{display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; font-size:15px}
+.mapa b{font-family:var(--display); font-size:20px; letter-spacing:.03em}
+.confs{display:flex; flex-direction:column; gap:6px}
+.confs button{justify-content:flex-start; text-align:left; display:flex; gap:10px; align-items:baseline; white-space:normal}
+.confs .otra{display:flex; flex-wrap:wrap; gap:8px; align-items:center; font-size:14px; padding-top:6px; border-top:1px solid var(--line)}
+.confs .otra select{width:auto; min-width:220px; max-width:100%}
+.arbol{list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:8px 18px; font-size:13px}
+.arbol li{display:grid; grid-template-columns:16px 1fr; column-gap:4px; min-width:0}
+.arbol li > *{grid-column:2; min-width:0}
+.arbol li .mono{display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--muted)}
+.arbol li::before{grid-column:1; grid-row:1}
+.arbol li.si::before{content:"✓"; color:var(--ok); font-weight:700}
+.arbol li.no::before{content:"✗"; color:var(--err); font-weight:700}
+.arbol li.info::before{content:"•"; color:var(--muted)}
+#donde{grid-template-columns:1fr}
+#donde li .mono{white-space:normal; overflow-wrap:anywhere; color:var(--ink)}
+option.malo{color:var(--muted)}
+.lista{display:flex; flex-direction:column; gap:6px}
+.fila-t{display:flex; align-items:center; gap:10px; padding:7px 10px; border:1px solid var(--line); border-radius:8px; background:var(--bg); cursor:pointer; text-align:left; width:100%}
+.fila-t[aria-pressed="true"]{border-color:var(--trader); background:var(--trader-soft)}
+.bola{width:24px; height:24px; border-radius:50%; background:var(--trader); color:var(--surface); display:grid; place-items:center; font-weight:700; font-size:13px; flex:none}
+.bola.chofer{background:var(--route)}
+.fila-t .d{display:flex; flex-direction:column; line-height:1.2; min-width:0}
+.fila-t .d small{color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.tarjeta{border:1px solid var(--line); border-radius:10px; padding:10px 12px; display:flex; flex-direction:column; gap:8px; background:var(--bg)}
+.tarjeta.sel{border-color:var(--trader)}
+.tarjeta .tt{display:flex; align-items:center; gap:8px; font-weight:700; flex-wrap:wrap}
+.rel{font-size:12px; color:var(--muted)}
+.xy{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+.xy label{display:flex; flex-direction:column; gap:2px; font-size:12px; color:var(--muted); min-width:0}
+/* el color del marcador de mapa */
+.muestras{display:flex; flex-wrap:wrap; gap:6px; align-items:center}
+.muestra{width:24px; height:24px; border-radius:50%; border:1px solid var(--line); padding:0; cursor:pointer; flex:none}
+.muestra[aria-pressed="true"]{outline:2px solid var(--ink); outline-offset:2px}
+.muestra:disabled, .muestras input[type=color]:disabled{opacity:.4; cursor:default}
+.muestras input[type=color]{width:38px; height:26px; padding:0 2px; border:1px solid var(--line); border-radius:6px; background:var(--bg); cursor:pointer}
+
+/* ---- revision y salida ---- */
+.revision ul{margin:0; padding-left:18px; display:flex; flex-direction:column; gap:3px; font-size:14px}
+.revision li.ERROR{color:var(--err)}
+.revision li.AVISO{color:var(--warn)}
+.revision li.info{color:var(--muted)}
+.resultado{font-size:13px; margin:0; padding-left:18px; display:flex; flex-direction:column; gap:3px}
+.resultado li.ok{color:var(--ok)} .resultado li.err{color:var(--err)} .resultado li.warn{color:var(--warn)}
+.salida pre{margin:0; background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:12px 14px; overflow:auto; max-height:420px; font:12.5px/1.55 var(--mono); color:var(--ink)}
+.toast{font-size:13px; color:var(--ok); min-height:1.2em}
+.confirma{display:inline-flex; gap:6px; align-items:center; font-size:13px; color:var(--end)}
+@media (prefers-reduced-motion: reduce){ *{transition:none!important} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="raiz-aviso" id="raiz-aviso" role="alert" tabindex="-1" hidden></p>
+  <header class="top">
+    <div class="ident">
+      <span class="eyebrow">BZ_Trader — Traveling_Trader on Wheels</span>
+      <h1 data-i18n="html.h1">Service editor</h1>
+    </div>
+    <div class="lado">
+      <div class="herramientas">
+        <button class="btn" type="button" id="manual" data-i18n="html.manual" data-i18n-title="html.manual_tit" title="Opens the manual (PDF) in a new tab, in the editor's language">Manual</button>
+        <div class="idioma" id="idioma" role="group" data-i18n-aria="html.idioma_aria" aria-label="Editor language">
+          <svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3"><circle cx="8" cy="8" r="6.4"/><path d="M1.6 8h12.8M8 1.6c1.9 1.8 2.8 4 2.8 6.4S9.9 12.6 8 14.4C6.1 12.6 5.2 10.4 5.2 8S6.1 3.4 8 1.6z"/></svg>
+          <button type="button" data-lang="en" aria-pressed="true" lang="en" title="English">EN</button>
+          <button type="button" data-lang="es" aria-pressed="false" lang="es" title="Español">ES</button>
+        </div>
+      </div>
+      <p class="hint" id="manual-aviso" role="status"></p>
+      <div class="chips" id="chips"></div>
+    </div>
+  </header>
+
+  <!-- 1. el server -->
+  <section class="caja" aria-label="Step 1: the server" data-i18n-aria="html.paso1_aria">
+    <div class="fila-cab">
+      <div>
+        <h2><span class="paso">1</span> <span data-i18n="html.paso1">The server</span></h2>
+        <p class="hint" id="srv-estado">Choose the server folder: the one with <span class="mono">DayZServer_x64.exe</span>. It is remembered.</p>
+        <p class="hint warn" id="srv-otro" hidden></p>
+        <p class="hint resumen" id="srv-resumen" hidden></p>
+      </div>
+      <div class="chips">
+        <button class="btn primary grande" type="button" id="srv-escanear">Scan server</button>
+        <button class="btn" type="button" id="srv-elegir">Choose another folder</button>
+        <label class="btn" for="srv-lectura" id="srv-lectura-btn" hidden data-i18n-title="html.lectura_tit" title="This browser cannot write to folders: the folder is read and whatever has to be written is downloaded">Read without write access</label>
+        <input type="file" id="srv-lectura" class="oculto" webkitdirectory multiple>
+      </div>
+    </div>
+    <div id="srv-mapa" class="mapa" hidden></div>
+    <div id="srv-confs" class="confs" hidden></div>
+    <ul id="srv-guia" class="guia" hidden></ul>
+    <ul id="srv-arbol" class="arbol" hidden></ul>
+    <details id="carpetas">
+      <summary><b class="sum" data-i18n="html.avanzado">Advanced</b> <span data-i18n="html.avanzado_hint">only for a server laid out differently: folders by hand, a second traders folder, reading without writing</span></summary>
+      <div class="grid2" style="margin-top:10px">
+        <span data-i18n="html.cf_rutas">AutoDrive routes</span><input type="text" id="cf-rutas" data-cf="rutas">
+        <span data-i18n="html.cf_traders">Market traders</span><input type="text" id="cf-traders" data-cf="traders">
+        <span data-i18n="html.cf_traders2">Another traders folder</span><input type="text" id="cf-traders2" data-cf="traders2" placeholder="empty" data-i18n-ph="html.vacio">
+        <span data-i18n="html.cf_market">Market categories</span><input type="text" id="cf-market" data-cf="market">
+        <span data-i18n="html.cf_loadouts">Loadouts</span><input type="text" id="cf-loadouts" data-cf="loadouts">
+        <span data-i18n="html.cf_config">BZ_Trader config</span><input type="text" id="cf-config" data-cf="config">
+        <span data-i18n="html.cf_zonas">Market zones (mission)</span><input type="text" id="cf-zonas" data-cf="zonas">
+      </div>
+      <p class="hint" style="margin-top:8px" data-i18n="html.cf_hint">Relative to the server folder. Empty = the usual tree (in grey), which is right for almost every server.</p>
+      <div class="grupo" style="margin-top:8px">
+        <button class="btn" type="button" id="cf-def" data-i18n="html.cf_def">Back to the usual tree</button>
+        <label class="btn" for="srv-lectura" data-i18n="html.leer_sin_escribir" data-i18n-title="html.leer_sin_escribir_tit" title="The folder is read and whatever has to be written is downloaded">Read a folder without writing</label>
+      </div>
+    </details>
+  </section>
+
+  <!-- 2. el servicio -->
+  <section class="caja" aria-label="Step 2: the service" data-i18n-aria="html.paso2_aria">
+    <div class="fila-cab">
+      <div><h2><span class="paso">2</span> <span data-i18n="html.paso2">The recording or the service</span></h2><p class="hint" id="svc-estado">First choose the server folder (step 1).</p></div>
+      <span class="toast" id="svc-toast" role="status"></span>
+    </div>
+    <div class="grid2" id="paso2">
+      <span data-i18n="html.nuevo_toma">New from a converted recording</span>
+      <span class="grupo"><select id="toma-sel"></select><button class="btn primary" type="button" id="toma-nueva" data-i18n="html.armar">Build</button></span>
+      <span data-i18n="html.abrir_svc">Open a service</span>
+      <span class="grupo"><select id="svc-sel"></select><button class="btn" type="button" id="svc-abrir" data-i18n="html.abrir">Open</button></span>
+    </div>
+    <ul class="arbol" id="donde" hidden></ul>
+  </section>
+
+  <h2 class="titulo-paso" id="paso3-tit" hidden><span class="paso">3</span> <span data-i18n="html.paso3">Traders and stops</span></h2>
+  <!-- 3. la cinta y el trabajo (juntos: la cinta fija acompaña sólo hasta el final del inspector) -->
+  <div class="zona-trabajo" id="zona-trabajo" hidden>
+  <section class="cinta" aria-label="The route strip" data-i18n-aria="html.cinta_aria" id="cinta-caja" hidden>
+    <div class="scroll"><div class="fila" id="fila"></div></div>
+    <p class="pie" data-i18n-html="html.cinta_pie">Click a point. <b>A</b> is the general settings and who travels; each <b>mark 4</b> of the recording is a stop; <b>END</b> is how it ends.</p>
+  </section>
+
+  <div class="trabajo" id="trabajo" hidden>
+    <section class="panel escena" aria-live="polite">
+      <div class="cab"><h2 id="esc-tit"></h2><p class="hint" id="esc-hint"></p></div>
+      <div id="esc"></div>
+      <div class="leyenda" id="leyenda"></div>
+    </section>
+    <section class="panel" id="insp" aria-label="Settings of the chosen point" data-i18n-aria="html.insp_aria"></section>
+  </div>
+  </div>
+
+  <!-- 4. revisar y guardar -->
+  <section class="panel revision" id="revision" aria-label="Review" data-i18n-aria="html.rev_aria" hidden>
+    <div class="cab"><h2><span class="paso">4</span> <span data-i18n="html.paso4">Review and save</span></h2><p class="hint" data-i18n="html.rev_hint">The same checks the mod makes when it reads the file, plus what the editor knows about the server.</p></div>
+    <ul id="rev-lista"></ul>
+  </section>
+
+  <section class="panel" id="guardar" aria-label="Save" data-i18n-aria="html.guardar" hidden>
+    <div class="cab"><h2 data-i18n="html.guardar">Save</h2><p class="hint" id="g-destino"></p></div>
+    <div class="grupo">
+      <button class="btn primary" type="button" id="g-todo" data-i18n="html.g_todo">Save all</button>
+      <button class="btn" type="button" id="g-svc" data-i18n="html.g_svc">Only the service</button>
+      <button class="btn" type="button" id="g-crew" data-i18n="html.g_crew">Only the crew in the route</button>
+      <button class="btn" type="button" id="g-zona" data-i18n="html.g_zona">Create the zone</button>
+    </div>
+    <ul class="resultado" id="g-res"></ul>
+    <p class="nota" id="g-caliente"></p>
+  </section>
+
+  <section class="panel salida" id="salida" aria-label="The file the mod reads" data-i18n-aria="html.salida_aria" hidden>
+    <div class="cab" style="flex-direction:row;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:8px">
+      <div><h2 data-i18n="html.salida">The file BZ_Trader reads</h2><p class="hint" id="json-destino"></p></div>
+      <div class="chips"><span class="toast" id="toast" role="status"></span><button class="btn" id="copiar" type="button" data-i18n="html.copiar">Copy JSON</button></div>
+    </div>
+    <pre id="json" tabindex="0"></pre>
+  </section>
+</div>
+<script src="bzt_i18n.js"></script>
+<script src="bzt_nucleo.js"></script>
+<script src="bzt_editor.js"></script>
+</body>
+</html>

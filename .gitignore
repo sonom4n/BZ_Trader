@@ -1,0 +1,23 @@
+# Build artifacts
+*.pbo
+*.pbo.*
+*.bisign
+*.bikey
+*.log
+*.tmp
+
+# Local build script (paths of the development machine)
+build.ps1
+
+# AddonBuilder temp
+temp/
+.temp/
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*~
+
+# OS
+Thumbs.db
